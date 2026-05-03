@@ -1,0 +1,74 @@
+# Navigate to your project root
+cd "C:\Users\smach\Desktop\Road Accident Prediction and Severity Classification"
+
+# Create .gitignore file
+@"
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Flask
+instance/
+.webassets-cache
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Models
+models/*.pkl
+models/*.h5
+models/*.pt
+models/yolo_weights/
+
+# Uploads
+uploads/*
+
+# Environment
+.env
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Frontend node_modules
+node_modules/
+"@ | Out-File -FilePath .gitignore -Encoding UTF8
