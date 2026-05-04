@@ -15,8 +15,17 @@ db = SQLAlchemy()
 jwt = JWTManager()
 bcrypt = Bcrypt()
 
-# Create Flask app
-app = Flask(__name__, static_folder='../frontend', static_url_path='')
+# ==================== RENDER COMPATIBILITY ====================
+# Determine if running on Render
+IS_RENDER = os.environ.get('RENDER', False)
+
+# Create Flask app with appropriate static folder path
+if IS_RENDER:
+    # On Render - frontend is at root level
+    app = Flask(__name__, static_folder='../frontend', static_url_path='')
+else:
+    # Local development
+    app = Flask(__name__, static_folder='../frontend', static_url_path='')
 
 # Setup paths
 backend_dir = Path(__file__).parent.resolve()
@@ -25,8 +34,8 @@ database_dir.mkdir(exist_ok=True)
 db_path = database_dir / 'accident_prediction.db'
 
 # Configuration
-app.config['SECRET_KEY'] = 'dev-secret-key-change-in-production-12345'
-app.config['JWT_SECRET_KEY'] = 'jwt-secret-key-change-in-production-67890'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production-12345')
+app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY', 'jwt-secret-key-change-in-production-67890')
 app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = False
@@ -35,7 +44,12 @@ app.config['JWT_ACCESS_TOKEN_EXPIRES'] = False
 db.init_app(app)
 jwt.init_app(app)
 bcrypt.init_app(app)
-CORS(app, origins=['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:5000'])
+
+# CORS configuration - Allow all origins for Render
+if IS_RENDER:
+    CORS(app, origins=['*'])
+else:
+    CORS(app, origins=['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:5000'])
 
 # ==================== JWT CONFIGURATION ====================
 
@@ -213,11 +227,15 @@ with app.app_context():
 
 @app.route('/')
 def serve_index():
-    return send_from_directory('../frontend', 'index.html')
+    try:
+        return send_from_directory('../frontend', 'index.html')
+    except:
+        return jsonify({'error': 'Frontend not found'}), 404
 
 @app.route('/<path:path>')
 def serve_frontend(path):
-    if os.path.exists(os.path.join('../frontend', path)):
+    frontend_path = os.path.join('../frontend', path)
+    if os.path.exists(frontend_path):
         return send_from_directory('../frontend', path)
     return send_from_directory('../frontend', 'index.html')
 
@@ -229,7 +247,8 @@ def health_check():
         'status': 'healthy',
         'message': 'Road Accident Prediction System is running',
         'version': '1.0.0',
-        'timestamp': datetime.utcnow().isoformat()
+        'timestamp': datetime.utcnow().isoformat(),
+        'render': IS_RENDER
     }), 200
 
 @app.route('/api/auth/register', methods=['POST'])
@@ -387,12 +406,17 @@ def internal_error(error):
 
 # ==================== MAIN ====================
 
+# This is the key fix for Render - expose the 'app' variable
+# The Flask app instance is already named 'app'
+
 if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))
     print("\n" + "="*60)
     print("🚗 Road Accident Prediction System")
     print("="*60)
-    print(f"📍 Backend Server: http://localhost:5000")
-    print(f"📡 API Health: http://localhost:5000/api/health")
+    print(f"📍 Backend Server: http://0.0.0.0:{port}")
+    print(f"📡 API Health: http://0.0.0.0:{port}/api/health")
     print("="*60 + "\n")
     
-    app.run(host='127.0.0.1', port=5000, debug=True)
+    # Bind to 0.0.0.0 for Render compatibility
+    app.run(host='0.0.0.0', port=port, debug=False)
