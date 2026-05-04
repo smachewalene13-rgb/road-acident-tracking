@@ -15,17 +15,8 @@ db = SQLAlchemy()
 jwt = JWTManager()
 bcrypt = Bcrypt()
 
-# ==================== RENDER COMPATIBILITY ====================
-# Determine if running on Render
-IS_RENDER = os.environ.get('RENDER', False)
-
-# Create Flask app with appropriate static folder path
-if IS_RENDER:
-    # On Render - frontend is at root level
-    app = Flask(__name__, static_folder='../frontend', static_url_path='')
-else:
-    # Local development
-    app = Flask(__name__, static_folder='../frontend', static_url_path='')
+# Create Flask app - MUST be named 'app' at module level for Gunicorn
+app = Flask(__name__, static_folder='../frontend', static_url_path='')
 
 # Setup paths
 backend_dir = Path(__file__).parent.resolve()
@@ -45,11 +36,8 @@ db.init_app(app)
 jwt.init_app(app)
 bcrypt.init_app(app)
 
-# CORS configuration - Allow all origins for Render
-if IS_RENDER:
-    CORS(app, origins=['*'])
-else:
-    CORS(app, origins=['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:5000'])
+# CORS configuration
+CORS(app, origins=['*'])
 
 # ==================== JWT CONFIGURATION ====================
 
@@ -247,8 +235,7 @@ def health_check():
         'status': 'healthy',
         'message': 'Road Accident Prediction System is running',
         'version': '1.0.0',
-        'timestamp': datetime.utcnow().isoformat(),
-        'render': IS_RENDER
+        'timestamp': datetime.utcnow().isoformat()
     }), 200
 
 @app.route('/api/auth/register', methods=['POST'])
@@ -404,10 +391,7 @@ def internal_error(error):
     db.session.rollback()
     return jsonify({'error': 'Internal server error'}), 500
 
-# ==================== MAIN ====================
-
-# This is the key fix for Render - expose the 'app' variable
-# The Flask app instance is already named 'app'
+# ==================== RUN SERVER ====================
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
@@ -418,5 +402,4 @@ if __name__ == '__main__':
     print(f"📡 API Health: http://0.0.0.0:{port}/api/health")
     print("="*60 + "\n")
     
-    # Bind to 0.0.0.0 for Render compatibility
     app.run(host='0.0.0.0', port=port, debug=False)
