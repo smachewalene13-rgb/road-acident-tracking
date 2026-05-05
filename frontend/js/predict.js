@@ -1,12 +1,15 @@
 // frontend/js/predict.js
-const API_BASE_URL = 'https://road-acident-tracking.onrender.com/api';
+// Detect if running on Render or locally
+const isRender = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+const API_BASE_URL = isRender 
+    ? 'https://road-acident-tracking.onrender.com/api'
+    : 'http://localhost:5000/api';
+
+console.log('API_BASE_URL:', API_BASE_URL);
 
 // Check authentication
 const token = localStorage.getItem('access_token');
-console.log('Token exists:', !!token);
-
 if (!token && window.location.pathname.includes('predict.html')) {
-    console.log('No token found, redirecting to login');
     window.location.href = 'login.html';
 }
 
@@ -26,10 +29,18 @@ const loadingSpinner = document.getElementById('loadingSpinner');
 const predictionResult = document.getElementById('predictionResult');
 const noResultMessage = document.getElementById('noResultMessage');
 
-// Function to display prediction results
+// Helper function to convert severity to user-friendly text
+function getDisplayText(severity) {
+    if (severity === 'High') {
+        return '🔴 UNSAFE';
+    } else if (severity === 'Medium') {
+        return '⚠️ CAUTION';
+    } else {
+        return '✅ SAFE';
+    }
+}
+
 function displayPrediction(prediction) {
-    console.log('Displaying prediction:', prediction);
-    
     const severityBadge = document.getElementById('severityBadge');
     const confidenceFill = document.getElementById('confidenceFill');
     const recommendationsDiv = document.getElementById('recommendations');
@@ -39,27 +50,27 @@ function displayPrediction(prediction) {
     const riskScore = prediction.risk_score;
     const recommendations = prediction.recommendations || [];
     
-    let bgColor, icon, severityText;
+    // Get display text (Safe/Unsafe instead of Low/High)
+    const displayText = getDisplayText(severity);
+    
+    let bgColor, icon;
     
     if (severity === 'High') {
         bgColor = '#ef4444';
         icon = 'fa-skull-crosswalk';
-        severityText = 'High Severity';
     } else if (severity === 'Medium') {
         bgColor = '#f59e0b';
         icon = 'fa-exclamation-triangle';
-        severityText = 'Medium Severity';
     } else {
         bgColor = '#10b981';
         icon = 'fa-check-circle';
-        severityText = 'Low Severity';
     }
     
     severityBadge.style.display = 'block';
     severityBadge.style.background = `linear-gradient(135deg, ${bgColor}, ${bgColor}dd)`;
     severityBadge.innerHTML = `
         <i class="fas ${icon}" style="font-size: 3rem; margin-bottom: 10px;"></i>
-        <h3 style="font-size: 1.5rem; margin: 10px 0;">${severityText}</h3>
+        <h3 style="font-size: 1.8rem; margin: 10px 0;">${displayText}</h3>
         <p style="margin: 0;">Risk Score: ${riskScore}/25</p>
         <p style="margin: 5px 0 0 0; font-size: 0.9rem;">Confidence: ${confidence}%</p>
     `;
@@ -90,8 +101,6 @@ function displayPrediction(prediction) {
 }
 
 function showError(message) {
-    console.error('Error:', message);
-    
     predictionResult.style.display = 'block';
     predictionResult.innerHTML = `
         <div style="background: #fee2e2; color: #dc2626; padding: 20px; border-radius: 12px; text-align: center;">
@@ -103,7 +112,6 @@ function showError(message) {
     noResultMessage.style.display = 'none';
 }
 
-// Handle form submission
 if (predictionForm) {
     predictionForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -166,5 +174,3 @@ if (predictionForm) {
         }
     });
 }
-
-console.log('predict.js loaded');
